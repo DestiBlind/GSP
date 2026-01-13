@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机票盲盒 - 摇一摇开启惊喜之旅</title>
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-light: #818CF8;
+            --secondary: #10B981;
+            --secondary-light: #34D399;
+            --accent: #F59E0B;
+            --accent-light: #FBBF24;
+            --bg-light: #F8FAFC;
+            --bg-card: #FFFFFF;
+            --text-primary: #1E293B;
+            --text-secondary: #475569;
+            --text-light: #64748B;
+            --border: #E2E8F0;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 20px 40px -10px rgba(0, 0, 0, 0.12);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-primary);
+            touch-action: manipulation;
+        }
+
+        /* 主舞台容器 */
+        .main-stage {
+            position: relative;
+            width: 100%;
+            max-width: 350px;
+            height: 600px;
+            background-color: var(--bg-card);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 顶部标题区域 */
+        .header {
+            padding: 20px 16px 12px;
+            text-align: center;
+            z-index: 10;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.98), rgba(255,255,255,0.95));
+            border-bottom: 1px solid var(--border);
+        }
+
+        .title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 400;
+            line-height: 1.3;
+        }
+
+        /* 摇一摇提示 */
+        .shake-hint {
+            color: var(--accent);
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 8px;
+            animation: shakeHint 2s ease-in-out infinite;
+        }
+
+        /* 设备检测提示 */
+        .device-hint {
+            color: var(--text-light);
+            font-size: 12px;
+            margin-top: 6px;
+            padding: 4px 8px;
+            background: rgba(245, 158, 11, 0.08);
+            border-radius: 8px;
+            display: inline-block;
+        }
+
+        /* 城市背景 */
+        .city-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+            overflow: hidden;
+            opacity: 0.3;
+        }
+
+        .city-item {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .city-name {
+            font-size: 26px;
+            margin-bottom: 2px;
+        }
+
+        .airport-tag {
+            font-size: 10px;
+            color: var(--text-light);
+            background: rgba(79, 70, 229, 0.08);
+            padding: 2px 6px;
+            border-radius: 8px;
+        }
+
+        /* 城市浮动动画 */
+        @keyframes cityFloat {
+            0%, 100% { 
+                transform: translateY(0) scale(1);
+                opacity: 0.4;
+            }
+            50% { 
+                transform: translateY(-4px) scale(1.02);
+                opacity: 0.6;
+            }
+        }
+
+        /* 主要内容区域 */
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 12px 16px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* 盲盒容器 */
+        .box-container {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.6s ease;
+            width: 100%;
+            height: 180px;
+        }
+
+        /* 立体行李箱 */
+        .suitcase {
+            width: 120px;
+            height: 90px;
+            background: linear-gradient(145deg, var(--accent) 0%, var(--accent-light) 100%);
+            border-radius: 14px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 
+                0 8px 20px rgba(245, 158, 11, 0.25),
+                inset 0 -3px 8px rgba(0, 0, 0, 0.1),
+                inset 0 3px 8px rgba(255, 255, 255, 0.4);
+            animation: float 3.5s ease-in-out infinite;
+            transform-origin: center center;
+            cursor: pointer;
+        }
+
+        /* 摇动动画 */
+        .suitcase.shaking {
+            animation: shaking 0.5s ease-in-out infinite alternate;
+        }
+
+        /* 行李箱打开发光效果 */
+        .suitcase.open {
+            animation: boxOpen 0.8s ease forwards;
+            box-shadow: 
+                0 0 40px rgba(245, 158, 11, 0.6),
+                0 0 60px rgba(245, 158, 11, 0.3);
+            transform: scale(1.05);
+        }
+
+        /* 行李箱把手 */
+        .suitcase::after {
+            content: '';
+            position: absolute;
+            top: -8px;
+            width: 40px;
+            height: 10px;
+            border: 2px solid #92400E;
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            background: linear-gradient(to bottom, #B45309, #92400E);
+        }
+
+        /* 问号 */
+        .question-container {
+            position: relative;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .question {
+            font-size: 44px;
+            color: white;
+            font-weight: 800;
+            text-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+            transition: all 0.4s ease;
+        }
+
+        .suitcase.open .question {
+            opacity: 0;
+            transform: scale(0);
+        }
+
+        .hint-text {
+            text-align: center;
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            line-height: 1.4;
+            max-width: 200px;
+            margin-top: 12px;
+            opacity: 1;
+            transition: opacity 0.4s ease;
+        }
+
+        .hint-text.hidden {
+            opacity: 0;
+        }
+
+        /* 摇动计数器 */
+        .shake-counter {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+            margin-top: 10px;
+        }
+
+        .shake-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .shake-dot.active {
+            background-color: var(--accent);
+            transform: scale(1.2);
+        }
+
+        /* 浮动动画 */
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(1deg); }
+        }
+
+        /* 摇动动画 */
+        @keyframes shaking {
+            0% { transform: rotate(-3deg); }
+            100% { transform: rotate(3deg); }
+        }
+
+        /* 摇动提示动画 */
+        @keyframes shakeHint {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-3px); }
+            75% { transform: translateX(3px); }
+        }
+
+        /* 开箱发光动画 */
+        @keyframes boxOpen {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 8px 20px rgba(245, 158, 11, 0.25);
+            }
+            50% {
+                transform: scale(1.1);
+                box-shadow: 
+                    0 0 60px rgba(245, 158, 11, 0.8),
+                    0 0 80px rgba(245, 158, 11, 0.5);
+            }
+            100% {
+                transform: scale(1.05);
+                box-shadow: 
+                    0 0 40px rgba(245, 158, 11, 0.6),
+                    0 0 60px rgba(245, 158, 11, 0.3);
+            }
+        }
+
+        /* 权益弹窗 */
+        .modal {
+            position: absolute;
+            z-index: 20;
+            width: 270px;
+            max-height: 460px;
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--secondary-light) 100%);
+            border-radius: 20px;
+            padding: 20px 18px;
+            text-align: center;
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.95);
+            transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            visibility: hidden;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            top: 50%;
+            left: 50%;
+            overflow: hidden;
+        }
+
+        .modal.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .modal-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* 权益图标 */
+        .modal-icon {
+            font-size: 36px;
+            color: white;
+            margin-bottom: 12px;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+        }
+
+        /* 主权益标题 */
+        .modal-main-title {
+            color: white;
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 4px;
+            line-height: 1.1;
+            text-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-main-subtitle {
+            color: white;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+
+        .modal-highlight {
+            color: #FBBF24;
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 16px;
+            line-height: 1.2;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 目的地提示文字 */
+        .destination-hint {
+            color: white;
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1.4;
+            margin-bottom: 16px;
+            padding: 0 8px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 使用按钮 */
+        .btn-use {
+            background: linear-gradient(to right, var(--primary), var(--primary-light));
+            color: white;
+            border: none;
+            padding: 13px 28px;
+            border-radius: 20px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 5px 18px rgba(79, 70, 229, 0.25);
+            transition: all 0.3s ease;
+            width: 100%;
+            margin: 8px 0;
+        }
+
+        .btn-use:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 22px rgba(79, 70, 229, 0.35);
+        }
+
+        /* 验证码区域 */
+        .verify-section {
+            opacity: 0;
+            transform: translateY(8px);
+            transition: all 0.5s ease 0.5s;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.18);
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            margin: 10px 0;
+        }
+
+        .verify-section.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .verify-label {
+            color: white;
+            font-size: 13px;
+            margin-bottom: 6px;
+            display: block;
+            font-weight: 500;
+        }
+
+        .verify-code {
+            color: #FFD700;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            padding: 8px 16px;
+            border-radius: 10px;
+            display: inline-block;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        /* 问卷提示 */
+        .questionnaire-hint {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 12px;
+            line-height: 1.5;
+            padding: 10px;
+            font-weight: 500;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: all 0.5s ease 0.7s;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-top: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .questionnaire-hint.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 开箱光线效果 */
+        .light-rays {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 220px;
+            height: 220px;
+            z-index: 5;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .light-ray {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 1.5px;
+            height: 100px;
+            background: linear-gradient(to top, rgba(255,255,255,0) 0%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0) 100%);
+            transform-origin: center bottom;
+            border-radius: 1px;
+        }
+
+        .light-rays.active {
+            animation: raysShow 0.8s ease forwards;
+        }
+
+        @keyframes raysShow {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1.3); }
+        }
+
+        /* 进度指示器 */
+        .progress-container {
+            position: absolute;
+            bottom: 12px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            z-index: 5;
+        }
+
+        .progress-dots {
+            display: flex;
+            gap: 5px;
+        }
+
+        .progress-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background-color: var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .progress-dot.active {
+            background-color: var(--primary);
+            transform: scale(1.2);
+        }
+
+        /* 权限请求按钮 */
+        .permission-btn {
+            background: linear-gradient(to right, var(--secondary), var(--secondary-light));
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 16px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+            transition: all 0.3s ease;
+        }
+
+        .permission-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+        }
+    </style>
+</head>
+<body>
+    <div class="main-stage">
+        <!-- 顶部标题区域 -->
+        <div class="header">
+            <div class="title">机票盲盒 · 摇一摇开启</div>
+            <div class="subtitle">摇动手机开启盲盒，揭开隐藏惊喜</div>
+            <div class="shake-hint">📱 摇动手机试试看！</div>
+            <div class="device-hint" id="deviceHint">正在检测设备...</div>
+        </div>
+
+        <!-- 城市背景 -->
+        <div class="city-background" id="cityBox"></div>
+
+        <!-- 开箱光线效果 -->
+        <div class="light-rays" id="lightRays"></div>
+
+        <!-- 主要内容区域 -->
+        <div class="content-area">
+            <!-- 盲盒区域 -->
+            <div class="box-container" id="boxUI">
+                <div class="suitcase" id="suitcase">
+                    <div class="question-container">
+                        <span class="question">?</span>
+                    </div>
+                </div>
+                <div class="hint-text" id="hintText">摇动手机开启盲盒</div>
+                
+                <!-- 摇动计数器 -->
+                <div class="shake-counter" id="shakeCounter">
+                    <div class="shake-dot"></div>
+                    <div class="shake-dot"></div>
+                    <div class="shake-dot"></div>
+                </div>
+                
+                <!-- 权限请求按钮 -->
+                <button class="permission-btn" id="permissionBtn" style="display:none;">允许摇动检测</button>
+            </div>
+
+            <!-- 权益弹窗 -->
+            <div class="modal" id="resultUI">
+                <div class="modal-icon">🎫</div>
+                <div class="modal-content">
+                    <div class="modal-main-title">恭喜您，获得</div>
+                    <div class="modal-main-subtitle">本次隐藏权益</div>
+                    <div class="modal-highlight">公务舱</div>
+                    
+                    <div class="destination-hint">
+                        此次目的地将随机生成<br>
+                        是否即将开始您的神秘之旅？
+                    </div>
+                    
+                    <button class="btn-use">开启神秘之旅</button>
+                    
+                    <!-- 验证码区域 -->
+                    <div class="verify-section" id="verifySection">
+                        <div class="verify-label">专属验证码</div>
+                        <div class="verify-code">L789</div>
+                    </div>
+                    
+                    <!-- 问卷提示 -->
+                    <div class="questionnaire-hint" id="questionnaireHint">
+                        请继续填写后续的问卷<br>
+                        完成完整的旅行体验
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 进度指示器 -->
+        <div class="progress-container">
+            <div class="progress-dots">
+                <div class="progress-dot active"></div>
+                <div class="progress-dot"></div>
+                <div class="progress-dot"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 城市数据
+        const cities = [
+            {n:'上海', a:'PVG'},
+            {n:'北京', a:'PEK'},
+            {n:'十堰', a:'WDS'},
+            {n:'张家界', a:'DYG'},
+            {n:'西双版纳', a:'JHG'},
+            {n:'丽江', a:'LJG'},
+            {n:'桂林', a:'KWL'},
+            {n:'呼和浩特', a:'HET'},
+            {n:'兰州', a:'LHW'},
+            {n:'泉州', a:'JJN'}
+        ];
+
+        // DOM元素
+        const cityBox = document.getElementById('cityBox');
+        const suitcase = document.getElementById('suitcase');
+        const hintText = document.getElementById('hintText');
+        const deviceHint = document.getElementById('deviceHint');
+        const resultUI = document.getElementById('resultUI');
+        const verifySection = document.getElementById('verifySection');
+        const questionnaireHint = document.getElementById('questionnaireHint');
+        const lightRays = document.getElementById('lightRays');
+        const progressDots = document.querySelectorAll('.progress-dot');
+        const shakeCounter = document.getElementById('shakeCounter');
+        const shakeDots = document.querySelectorAll('.shake-dot');
+        const permissionBtn = document.getElementById('permissionBtn');
+        
+        // 状态变量
+        let isBoxOpened = false;
+        let shakeCount = 0;
+        let isListening = false;
+        let lastUpdate = 0;
+        let x = 0, y = 0, z = 0;
+        let lastX = 0, lastY = 0, lastZ = 0;
+        
+        // 摇动检测参数
+        const SHAKE_THRESHOLD = 15; // 摇动阈值
+        const SHAKE_COUNT_NEEDED = 3; // 需要摇动次数
+        const SHAKE_TIMEOUT = 1000; // 摇动间隔时间(ms)
+        const SHAKE_SLOPE = 0.8; // 滤波系数
+
+        // 初始化城市背景
+        function initCities() {
+            cityBox.innerHTML = '';
+            
+            const positions = [
+                {left: 15, top: 30},
+                {left: 75, top: 40},
+                {left: 25, top: 60},
+                {left: 80, top: 25},
+                {left: 40, top: 75},
+                {left: 65, top: 65},
+                {left: 20, top: 45},
+                {left: 70, top: 80},
+                {left: 10, top: 70},
+                {left: 85, top: 55}
+            ];
+            
+            cities.forEach((city, index) => {
+                if (index >= positions.length) return;
+                
+                const div = document.createElement('div');
+                div.className = 'city-item';
+                div.innerHTML = `
+                    <span class="city-name">${city.n}</span>
+                    <span class="airport-tag">${city.a}</span>
+                `;
+                
+                div.style.left = `${positions[index].left}%`;
+                div.style.top = `${positions[index].top}%`;
+                
+                const delay = Math.random() * 2;
+                const duration = 4 + Math.random() * 3;
+                div.style.animation = `cityFloat ${duration}s ease-in-out infinite`;
+                div.style.animationDelay = `${delay}s`;
+                
+                cityBox.appendChild(div);
+            });
+        }
+        
+        // 创建光线效果
+        function createLightRays() {
+            lightRays.innerHTML = '';
+            for (let i = 0; i < 12; i++) {
+                const ray = document.createElement('div');
+                ray.className = 'light-ray';
+                ray.style.transform = `translate(-50%, -50%) rotate(${i * 30}deg)`;
+                lightRays.appendChild(ray);
+            }
+        }
+        
+        // 更新进度指示器
+        function updateProgress(step) {
+            progressDots.forEach((dot, index) => {
+                if (index === step) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+        }
+        
+        // 更新摇动计数器
+        function updateShakeCounter(count) {
+            shakeDots.forEach((dot, index) => {
+                if (index < count) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+        }
+        
+        // 分步显示权益内容
+        function showRewardContent() {
+            // 第一步：显示弹窗
+            resultUI.classList.add('active');
+            updateProgress(2);
+            
+            // 第二步：延迟显示验证码
+            setTimeout(() => {
+                verifySection.classList.add('active');
+            }, 600);
+            
+            // 第三步：延迟显示问卷提示
+            setTimeout(() => {
+                questionnaireHint.classList.add('active');
+            }, 900);
+        }
+        
+        // 开箱动画
+        function openBox() {
+            if (isBoxOpened) return;
+            isBoxOpened = true;
+            
+            // 移除摇动效果
+            suitcase.classList.remove('shaking');
+            shakeCounter.style.display = 'none';
+            
+            // 更新进度
+            updateProgress(1);
+            
+            // 开箱发光效果
+            suitcase.classList.add('open');
+            hintText.textContent = "盲盒已开启！";
+            deviceHint.textContent = "恭喜！已成功开启盲盒";
+            lightRays.classList.add('active');
+            
+            // 显示光线效果
+            setTimeout(() => {
+                lightRays.classList.remove('active');
+            }, 800);
+            
+            // 延迟后显示权益弹窗
+            setTimeout(() => {
+                showRewardContent();
+            }, 1000);
+        }
+        
+        // 摇动检测函数
+        function handleDeviceMotion(event) {
+            if (!event.accelerationIncludingGravity || isBoxOpened) return;
+            
+            const currentTime = Date.now();
+            if (currentTime - lastUpdate < 100) return; // 限制检测频率
+            
+            lastUpdate = currentTime;
+            
+            // 获取加速度数据
+            const acceleration = event.accelerationIncludingGravity;
+            
+            // 应用低通滤波器减少噪声
+            x = acceleration.x * SHAKE_SLOPE + lastX * (1 - SHAKE_SLOPE);
+            y = acceleration.y * SHAKE_SLOPE + lastY * (1 - SHAKE_SLOPE);
+            z = acceleration.z * SHAKE_SLOPE + lastZ * (1 - SHAKE_SLOPE);
+            
+            // 计算速度变化（近似的）
+            const deltaX = Math.abs(x - lastX);
+            const deltaY = Math.abs(y - lastY);
+            const deltaZ = Math.abs(z - lastZ);
+            
+            // 更新上一次的值
+            lastX = x;
+            lastY = y;
+            lastZ = z;
+            
+            // 检测是否达到摇动阈值
+            const totalDelta = deltaX + deltaY + deltaZ;
+            
+            if (totalDelta > SHAKE_THRESHOLD) {
+                // 增加摇动计数
+                shakeCount++;
+                updateShakeCounter(shakeCount);
+                
+                // 开始摇动动画
+                if (!suitcase.classList.contains('shaking')) {
+                    suitcase.classList.add('shaking');
+                    hintText.textContent = "检测到摇动，继续摇动...";
+                }
+                
+                // 更新提示
+                deviceHint.textContent = `摇动检测: ${shakeCount}/${SHAKE_COUNT_NEEDED}`;
+                
+                // 摇动达到指定次数后开启盲盒
+                if (shakeCount >= SHAKE_COUNT_NEEDED) {
+                    window.removeEventListener('devicemotion', handleDeviceMotion);
+                    isListening = false;
+                    openBox();
+                }
+                
+                // 重置摇动计数（超时）
+                clearTimeout(window.shakeTimeout);
+                window.shakeTimeout = setTimeout(() => {
+                    if (!isBoxOpened) {
+                        shakeCount = 0;
+                        updateShakeCounter(0);
+                        suitcase.classList.remove('shaking');
+                        hintText.textContent = "摇动手机开启盲盒";
+                        deviceHint.textContent = "摇动已重置，请重新摇动";
+                    }
+                }, SHAKE_TIMEOUT);
+            }
+        }
+        
+        // 请求设备运动权限
+        function requestMotionPermission() {
+            if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                DeviceMotionEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            // 权限已授予
+                            deviceHint.textContent = "摇动检测已启用";
+                            permissionBtn.style.display = 'none';
+                            startShakeDetection();
+                        } else {
+                            // 权限被拒绝
+                            deviceHint.textContent = "摇动检测权限被拒绝，请点击行李箱开启";
+                            suitcase.style.cursor = 'pointer';
+                            suitcase.addEventListener('click', openBox);
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("权限请求错误:", error);
+                        deviceHint.textContent = "权限请求失败，请点击行李箱开启";
+                        suitcase.style.cursor = 'pointer';
+                        suitcase.addEventListener('click', openBox);
+                    });
+            } else {
+                // 非iOS设备，直接开始检测
+                startShakeDetection();
+            }
+        }
+        
+        // 开始摇动检测
+        function startShakeDetection() {
+            if (window.DeviceMotionEvent && !isListening) {
+                window.addEventListener('devicemotion', handleDeviceMotion, false);
+                isListening = true;
+                deviceHint.textContent = "摇动检测已启动，请摇动手机";
+                shakeCounter.style.display = 'flex';
+            } else {
+                // 不支持摇动检测
+                deviceHint.textContent = "您的设备不支持摇动检测，请点击行李箱开启";
+                suitcase.style.cursor = 'pointer';
+                suitcase.addEventListener('click', openBox);
+            }
+        }
+        
+        // 初始化页面
+        window.onload = () => {
+            initCities();
+            createLightRays();
+            updateProgress(0);
+            updateShakeCounter(0);
+            
+            // 检查设备是否支持摇动检测
+            if (window.DeviceMotionEvent) {
+                // 对于iOS设备，需要用户授权
+                if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                    deviceHint.textContent = "需要授权摇动检测权限";
+                    permissionBtn.style.display = 'block';
+                    permissionBtn.addEventListener('click', requestMotionPermission);
+                } else {
+                    // 非iOS设备直接开始
+                    startShakeDetection();
+                }
+            } else {
+                // 不支持摇动检测
+                deviceHint.textContent = "您的设备不支持摇动检测，请点击行李箱开启";
+                suitcase.style.cursor = 'pointer';
+                suitcase.addEventListener('click', openBox);
+            }
+            
+            // 点击行李箱开启（备用方式）
+            suitcase.addEventListener('click', function() {
+                if (!isBoxOpened) {
+                    deviceHint.textContent = "使用点击方式开启盲盒";
+                    openBox();
+                }
+            });
+        };
+        
+        // 点击弹窗按钮
+        document.querySelector('.btn-use').addEventListener('click', () => {
+            alert('恭喜！公务舱升级权益已激活。\n验证码：L789\n请记住此验证码完成后续的问卷填写。');
+        });
+    </script>
+</body>
+</html>
